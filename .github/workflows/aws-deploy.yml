@@ -1,0 +1,49 @@
+name: Deploy to AWS Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    env:
+      DOTNET_ROOT: /usr/share/dotnet
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Publish .NET app
+        run: dotnet publish -c Release -o publish
+
+      - name: Prepare zip file
+        run: |
+          cd publish
+          zip -r ../app.zip .
+
+      - name: Get timestamp
+        id: timestamp
+        run: echo "now=$(date +'%Y%m%d-%H%M%S')" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy to Elastic Beanstalk
+        uses: einaregilsson/beanstalk-deploy@v22
+        with:
+          aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          region: us-east-1
+          application_name: getting-started-app
+          environment_name: gs-app-web-env
+          version_label: deploy-${{ github.sha }}-${{ steps.timestamp.outputs.now }}
+          deployment_package: app.zip
