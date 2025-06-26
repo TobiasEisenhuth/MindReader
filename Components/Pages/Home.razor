@@ -1,0 +1,94 @@
+@page "/"
+@rendermode InteractiveServer
+
+<h3>Click two cards to reveil them.</h3>
+
+<div class="grid">
+    @for (int i = 0; i < 16; i++)
+    {
+        var index = i;
+        <button class="card"
+                @onclick="() => RevealCard(index)"
+                disabled="@matchedCards.Contains(index)">
+            @if (candidateCards.Contains(index) || matchedCards.Contains(index))
+            {
+                <span>@(assignedEmojis.ContainsKey(index) ? assignedEmojis[index] : "❓")</span>
+            }
+        </button>
+    }
+</div>
+
+@if (matchedCards.Count == 16)
+{
+    <div class="overlay">
+        <h1>🎉 Unbelievable Memory!</h1>
+        <p>Please hire me, so I can keep footing the Azure bill. 💸</p>
+    </div>
+}
+
+@code {
+    private List<int> candidateCards = new();
+    private List<int> matchedCards = new();
+    private Dictionary<int, string> assignedEmojis = new();
+    private Queue<string> emojiQueue = new();
+    private bool isBusy = false;
+
+    protected override void OnInitialized()
+    {
+        InitGame();
+    }
+    private void InitGame()
+    {
+        candidateCards.Clear();
+        matchedCards.Clear();
+        assignedEmojis.Clear();
+        isBusy = false;
+
+        var emojiPool = new[]
+        {
+            "🐶", "🐱", "🐭", "🦊",
+            "🐻", "🐼", "🐨", "🐸"
+        };
+
+        var emojiPoolList = emojiPool.ToList();
+        var rng = new Random();
+        emojiPoolList = emojiPoolList.OrderBy(_ => rng.Next()).ToList();
+
+        emojiQueue = new Queue<string>(emojiPoolList);
+    }
+
+    private async Task RevealCard(int index)
+    {
+        if (isBusy || candidateCards.Contains(index) || matchedCards.Contains(index))
+            return;
+
+        candidateCards.Add(index);
+        StateHasChanged();
+
+        if (candidateCards.Count == 2)
+        {
+            isBusy = true;
+            await Task.Delay(500);
+
+            if (emojiQueue.Count > 0)
+            {
+                var emoji = emojiQueue.Dequeue();
+                assignedEmojis[candidateCards[0]] = emoji;
+                assignedEmojis[candidateCards[1]] = emoji;
+            }
+
+            matchedCards.AddRange(candidateCards);
+            candidateCards.Clear();
+            isBusy = false;
+
+            StateHasChanged();
+
+            if (matchedCards.Count == 16)
+            {
+                await Task.Delay(7000);
+                InitGame();
+                StateHasChanged();
+            }
+        }
+    }
+}
