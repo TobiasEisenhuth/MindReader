@@ -21,8 +21,8 @@
 @if (matchedCards.Count == 16)
 {
     <div class="overlay">
-        <h1>🎉 Unbelievable Memory!</h1>
-        <p>Please hire me, so I can keep footing the Azure bill. 💸</p>
+        <h1>🎉 New Highscore - YOU WIN!</h1>
+        <p>@GetWinMessage()</p>
     </div>
 }
 
@@ -90,5 +90,16 @@
                 StateHasChanged();
             }
         }
+    }
+
+    string GetWinMessage()
+    {
+        var platform = Environment.GetEnvironmentVariable("HOSTING_PLATFORM") ?? "Unknown";
+        return platform switch
+        {
+            "Azure" => "Please hire me, so I can keep footing the Azure bill. 💸",
+            "AWS" => "Please hire me, so I can keep footing the AWS bill. 💸",
+            _ => "Please hire me, so I can keep feeding my cat. 💸"
+        };
     }
 }
