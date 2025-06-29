@@ -12,6 +12,7 @@ env:
 
 jobs:
   build-and-push:
+    if: ${{ vars.DEPLOY_AZURE_DOCKER_WEB_APP == 'true' }}
     runs-on: ubuntu-latest
 
     steps:
