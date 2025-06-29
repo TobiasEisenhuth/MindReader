@@ -1,4 +1,4 @@
-name: Deploy to AWS ECR
+name: Deploy to AWS ECR and Elastic Beanstalk
 
 on:
   push:
@@ -27,6 +27,15 @@ jobs:
 
     - name: Build, tag, and push Docker image
       run: |
-        IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_ECR_REGION }}.amazonaws.com/${{ vars.AWS_ECR_REPOSITORY }}
+        IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_ECR_REGION }}.amazonaws.com/${{ vars.AWS_ECR_REPOSITORY }}:latest
         docker build -t $IMAGE_URI .
         docker push $IMAGE_URI
+
+    - name: Deploy to Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v22
+      with:
+        application_name: ${{ vars.AWS_EB_APP_NAME }}
+        environment_name: ${{ vars.AWS_EB_ENV_NAME }}
+        version_label: deploy-${{ github.sha }}
+        region: ${{ vars.AWS_ECR_REGION }}
+        docker_image: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_ECR_REGION }}.amazonaws.com/${{ vars.AWS_ECR_REPOSITORY }}:latest
