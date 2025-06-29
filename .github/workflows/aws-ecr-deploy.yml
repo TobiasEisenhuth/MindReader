@@ -1,14 +1,18 @@
-name: Deploy to AWS ECR
+name: Build and Deploy to AWS Elastic Beanstalk
 
 on:
   push:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   deploy:
     if: ${{ vars.DEPLOY_AWS_DOCKER == 'true' }}
     runs-on: ubuntu-latest
+
+    env:
+      IMAGE_URI: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_ECR_REGION }}.amazonaws.com/exploration/mindreader-docker:latest
 
     steps:
     - name: Checkout
@@ -25,8 +29,42 @@ jobs:
       run: |
         aws ecr get-login-password | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_ECR_REGION }}.amazonaws.com
 
-    - name: Build, tag, and push Docker image
+    - name: Build and push Docker image
       run: |
-        IMAGE_URI=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_ECR_REGION }}.amazonaws.com/${{ vars.AWS_ECR_REPOSITORY }}
         docker build -t $IMAGE_URI .
         docker push $IMAGE_URI
+
+    - name: Generate Dockerrun.aws.json
+      run: |
+        cat > Dockerrun.aws.json <<EOF
+        {
+          "AWSEBDockerrunVersion": "1",
+          "Image": {
+            "Name": "$IMAGE_URI",
+            "Update": "true"
+          },
+          "Ports": [
+            {
+              "ContainerPort": "80"
+            }
+          ]
+        }
+        EOF
+
+    - name: Zip Dockerrun.aws.json
+      run: zip app.zip Dockerrun.aws.json
+
+    - name: Generate unique version label
+      id: version
+      run: echo "label=deploy-${{ github.sha }}-$(date +%Y%m%d%H%M%S)" >> $GITHUB_OUTPUT
+
+    - name: Deploy to Elastic Beanstalk
+      uses: einaregilsson/beanstalk-deploy@v22
+      with:
+        aws_access_key: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws_secret_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        region: ${{ vars.AWS_ECR_REGION }}
+        application_name: ${{ vars.AWS_DOCKER_EB_APP_NAME }}
+        environment_name: ${{ vars.AWS_DOCKER_EB_ENV_NAME }}
+        version_label: ${{ steps.version.outputs.label }}
+        deployment_package: app.zip
