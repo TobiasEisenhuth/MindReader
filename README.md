@@ -3,6 +3,10 @@
 Simple rigged memory game in ASP.NET, created to explore the development and deployment of Cloud hosted applications.
 
 # Deployed Instances
+
+> [!IMPORTANT]
+> In case the instances are down due to cutting costs, please get in touch to get them up and running!
+
 | Techstack | URL |
 |--|--|
 | Azure - nativ Web App | https://mindreader-huf5dmb2g2hmdmg0.germanywestcentral-01.azurewebsites.net/ |
